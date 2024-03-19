@@ -59,6 +59,10 @@ fn get_files(directory: PathBuf, master_dir_file_map: &[DirFileMap<'static>]) ->
     Ok(file_match_maps)
 }
 
+fn organize_files(filematches: Vec<FileMatch<'static>>, master_dir_file_map: &[DirFileMap<'static>]) {
+    
+}
+
 fn main() -> Result<(), Box<dyn Error>> {
     let current_dir = current_dir()?;
     let dir_file_map: &[DirFileMap<'static>] = &[
