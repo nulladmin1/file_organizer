@@ -2,11 +2,12 @@
 // All the Standard Libraries are created by the Rust Team
 // Clap is by the clap-rs team (https://clap.rs)
 
-use std::error::Error;
-use std::fs;
+use std::fmt::{Display};
+use std::fs::{self, read_dir};
 use std::env::current_dir;
+use std::error::Error;
 use std::path::{Path, PathBuf};
-use clap::{command, Arg};
+use clap::{command, Arg, ArgAction};
 
 fn main() -> Result<(), Box<dyn Error>> {
     let arg_matches = command!()
@@ -16,21 +17,32 @@ fn main() -> Result<(), Box<dyn Error>> {
                 .help("The directory where files should be organized (CWD if not given).")
         )
         .arg(
-            Arg::new("verbosity")
+            Arg::new("verbose")
                 .short('v')
-                .long("verbosity")
-                .index(1)
+                .long("verbose")
+                .action(ArgAction::SetTrue)
         )
         .version("1.0")
         .about("Organizes files in a given directory (CWD if not given).")
         .get_matches();
+    
+    let verbose = arg_matches.get_flag("verbose");
 
-    println!("{:?}", arg_matches.get_one::<String>("verbosity").unwrap());
+    let directory_path: PathBuf = match arg_matches.get_one::<String>("directory") {
+        Some(path) => path.into(),
+        None => current_dir()?,
+    };
+    
+    if verbose {
+        let files = read_dir(&directory_path).unwrap();
+        println!("Files in directory: ");
+        for file in files {
+            println!("{}", file.unwrap().path().display())
+        }
+    }
 
-    let path: PathBuf = arg_matches.get_one("directory").unwrap().into();
-    // let current_dir = current_dir()?;
-    // let files_to_organize = get_files(&current_dir)?;
-    // organize_files(&current_dir, &files_to_organize)?;
+    let files_to_organize = get_files(&directory_path)?;
+    organize_files(&directory_path, &files_to_organize, verbose)?;
 
     Ok(())
 }
@@ -57,6 +69,20 @@ impl AsRef<Path> for Subdirectories {
     }
 }
 
+impl Display for Subdirectories {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let subdirectory_string = match self {
+            Subdirectories::Archives => "Archives",
+            Subdirectories::Code => "Code",
+            Subdirectories::Documents => "Documents",
+            Subdirectories::Music => "Music",
+            Subdirectories::Pictures => "Pictures",
+            Subdirectories::Videos => "Videos",
+        };
+        write!(f, "{}", subdirectory_string)        
+    }
+}
+
 struct DirFileMap<'a>{
     subdirectory: &'a Subdirectories,
     filetypes: &'a [&'a str],
@@ -76,6 +102,12 @@ impl <'a> FileMatch<'a> {
     }
 }
 
+impl <'a> Display for FileMatch<'a> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "Directory {}; File: {}", self.directory, self.file_path.path().to_str().unwrap())
+    }
+}
+
 const DIR_FILE_MAP: &[DirFileMap<'static>] = &[
     DirFileMap { subdirectory: &Subdirectories::Archives, filetypes: &["tar", "gz", "xz", "bz2", "zip", "7z", "rar", "dmg,"] },
     DirFileMap { subdirectory: &Subdirectories::Music, filetypes: &["mp3", "mp4a", "wav"] },
@@ -87,7 +119,7 @@ const DIR_FILE_MAP: &[DirFileMap<'static>] = &[
 
 
 fn get_files(directory: &PathBuf) -> Result<Vec<FileMatch<'static>>, Box<dyn Error>> {
-    let directory_files = fs::read_dir(&directory)?;
+    let directory_files = fs::read_dir(directory)?;
     let mut file_match_maps: Vec<FileMatch> = Vec::new();
 
     for directory_file in directory_files {
@@ -108,8 +140,9 @@ fn get_files(directory: &PathBuf) -> Result<Vec<FileMatch<'static>>, Box<dyn Err
             };
 
             for dir_file_map in DIR_FILE_MAP {
-                if dir_file_map.filetypes.contains(&&*file_extension) {
-                    file_match_maps.push(FileMatch::new(
+                if dir_file_map.filetypes.contains(&file_extension) {
+                    file_match_maps.push(
+                        FileMatch::new(
                         dir_file_map.subdirectory,
                         directory_file
                     ));
@@ -121,20 +154,24 @@ fn get_files(directory: &PathBuf) -> Result<Vec<FileMatch<'static>>, Box<dyn Err
     Ok(file_match_maps)
 }
 
-fn organize_files(directory: &PathBuf, filematches: &Vec<FileMatch<'static>>) -> Result<(), Box<dyn Error>> {
+fn organize_files(directory: &Path, filematches: &Vec<FileMatch<'static>>, verbose: bool) -> Result<(), Box<dyn Error>> {
     for subdirectory in DIR_FILE_MAP {
-        let subdir_path = Path::join(&directory, subdirectory.subdirectory);
+        let subdir_path = Path::join(directory, subdirectory.subdirectory);
+
         fs::create_dir_all(subdir_path)?;
     }
     for file_match in filematches {
-        println!("{:?}", file_match.file_path);
+        let subdirectory_file_path = Path::join(directory, file_match.directory.as_ref());
 
-        let subdirectory_file_path = Path::new(file_match.directory.as_ref());
         let file_name = match file_match.file_path.path().file_name() {
             Some(file_name) => file_name.to_owned(),
             None => continue,
         };
         let destination_file = subdirectory_file_path.join(&file_name);
+        
+        if verbose {
+            println!("Moving {} to {}... ", &file_match.file_path.path().to_str().unwrap(), &destination_file.to_str().unwrap());
+        }
 
         fs::rename(&file_match.file_path.path(), &destination_file)?;
     }
