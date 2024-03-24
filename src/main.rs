@@ -2,11 +2,13 @@
 // All the Standard Libraries are created by the Rust Team
 // Clap is by the clap-rs team (https://clap.rs)
 
+use ansi_term;
 use std::fmt::{Display};
 use std::fs::{self, read_dir};
 use std::env::current_dir;
 use std::error::Error;
 use std::path::{Path, PathBuf};
+use ansi_term::Color;
 use clap::{command, Arg, ArgAction};
 
 fn main() -> Result<(), Box<dyn Error>> {
@@ -21,6 +23,7 @@ fn main() -> Result<(), Box<dyn Error>> {
                 .short('v')
                 .long("verbose")
                 .action(ArgAction::SetTrue)
+                .help("Enable verbosity.")
         )
         .version("1.0")
         .about("Organizes files in a given directory (CWD if not given).")
@@ -35,10 +38,11 @@ fn main() -> Result<(), Box<dyn Error>> {
     
     if verbose {
         let files = read_dir(&directory_path).unwrap();
-        println!("Files in directory: ");
+        println!("{}", Color::White.bold().paint("Files in directory: "));
         for file in files {
-            println!("{}", file.unwrap().path().display())
+            println!("{}", Color::Green.paint(file.unwrap().file_name().to_str().unwrap()));
         }
+        println!();
     }
 
     let files_to_organize = get_files(&directory_path)?;
@@ -158,6 +162,9 @@ fn organize_files(directory: &Path, filematches: &Vec<FileMatch<'static>>, verbo
     for subdirectory in DIR_FILE_MAP {
         let subdir_path = Path::join(directory, subdirectory.subdirectory);
 
+        if verbose {
+            println!("{} {}", Color::White.bold().paint("Created directory: "),  Color::Cyan.paint(&subdirectory.subdirectory.to_string()));
+        }
         fs::create_dir_all(subdir_path)?;
     }
     for file_match in filematches {
@@ -169,9 +176,7 @@ fn organize_files(directory: &Path, filematches: &Vec<FileMatch<'static>>, verbo
         };
         let destination_file = subdirectory_file_path.join(&file_name);
         
-        if verbose {
-            println!("Moving {} to {}... ", &file_match.file_path.path().to_str().unwrap(), &destination_file.to_str().unwrap());
-        }
+        println!("Moving {} to {}... ", Color::Green.paint(file_match.file_path.path().to_str().unwrap()), Color::Green.paint(destination_file.to_str().unwrap()));
 
         fs::rename(&file_match.file_path.path(), &destination_file)?;
     }
