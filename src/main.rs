@@ -42,27 +42,26 @@ fn main() -> Result<(), Box<dyn Error>> {
         for dir_file_map in DIR_FILE_MAP {
             println!("{}", dir_file_map)
         }
-    }
+    } else {
+        let verbose = arg_matches.get_flag("verbose");
 
-    let verbose = arg_matches.get_flag("verbose");
+        let directory_path: PathBuf = match arg_matches.get_one::<String>("directory") {
+            Some(path) => path.into(),
+            None => current_dir()?,
+        };
 
-    let directory_path: PathBuf = match arg_matches.get_one::<String>("directory") {
-        Some(path) => path.into(),
-        None => current_dir()?,
-    };
-
-    if verbose {
-        let files = read_dir(&directory_path).unwrap();
-        println!("{}", Color::White.bold().paint("Files in directory: "));
-        for file in files {
-            println!("{}", Color::Green.paint(file.unwrap().file_name().to_str().unwrap()));
+        if verbose {
+            let files = read_dir(&directory_path).unwrap();
+            println!("{}", Color::White.bold().paint("Files in directory: "));
+            for file in files {
+                println!("{}", Color::Green.paint(file.unwrap().file_name().to_str().unwrap()));
+            }
+            println!();
         }
-        println!();
+
+        let files_to_organize = get_files(&directory_path)?;
+        organize_files(&directory_path, &files_to_organize, verbose)?;
     }
-
-    let files_to_organize = get_files(&directory_path)?;
-    organize_files(&directory_path, &files_to_organize, verbose)?;
-
     Ok(())
 }
 
