@@ -3,7 +3,7 @@
 // Clap is by the clap-rs team (https://clap.rs)
 
 use ansi_term;
-use std::fmt::{Display};
+use std::fmt::{Display, Formatter};
 use std::fs::{self, read_dir};
 use std::env::current_dir;
 use std::error::Error;
@@ -25,17 +25,32 @@ fn main() -> Result<(), Box<dyn Error>> {
                 .action(ArgAction::SetTrue)
                 .help("Enable verbosity.")
         )
+        .arg(
+            Arg::new("list-supported-files")
+                .short('l')
+                .long("list")
+                .action(ArgAction::SetTrue)
+                .help("List files supported by file_organizer")
+                .exclusive(true)
+        )
         .version("1.0")
         .about("Organizes files in a given directory (CWD if not given).")
         .get_matches();
-    
+
+    if arg_matches.get_flag("list-supported-files") {
+        println!("{}", Color::White.bold().paint("Supported files: "));
+        for dir_file_map in DIR_FILE_MAP {
+            println!("{}", dir_file_map)
+        }
+    }
+
     let verbose = arg_matches.get_flag("verbose");
 
     let directory_path: PathBuf = match arg_matches.get_one::<String>("directory") {
         Some(path) => path.into(),
         None => current_dir()?,
     };
-    
+
     if verbose {
         let files = read_dir(&directory_path).unwrap();
         println!("{}", Color::White.bold().paint("Files in directory: "));
@@ -90,6 +105,12 @@ impl Display for Subdirectories {
 struct DirFileMap<'a>{
     subdirectory: &'a Subdirectories,
     filetypes: &'a [&'a str],
+}
+
+impl<'a> Display for DirFileMap<'a> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}: {:?}", Color::White.paint(self.subdirectory.to_string()), self.filetypes)
+    }
 }
 
 struct FileMatch<'a> {
