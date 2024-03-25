@@ -14,4 +14,5 @@ Organizes files in a given directory (CWD if not given).
 &emsp;**-V,&emsp;--version**&emsp;Print version\
 
 <ins>**Credits:**</ins>\
-&emsp;**Clap-rs Team** for creating a CLI argument parser (https://clap.rs)
+&emsp;**Clap-rs Team** for creating a CLI argument parser, **clap** (https://clap.rs)
+&emsp;**Benjamin Sag0** for creating a crate for using ANSI escape codes, **ansi_term** (https://github.com/ogham/rust-ansi-term)
