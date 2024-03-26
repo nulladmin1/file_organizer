@@ -1,6 +1,7 @@
 // Acknowledgements:
 // All the Standard Libraries are created by the Rust Team
-// Clap is by the clap-rs team (https://clap.rs)
+// Clap is made and maintained by the clap-rs team (https://clap.rs)
+// Ansi_Term is made and maintaned mainly by Benjamin Sago (https://github.com/ogham)
 
 use ansi_term;
 use std::fmt::{Display, Formatter};
