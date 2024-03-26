@@ -14,4 +14,4 @@ Cargo.lock
 *.pdb
 
 # Test Folders
-test_*/
+test/
